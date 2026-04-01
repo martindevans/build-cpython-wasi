@@ -65,7 +65,7 @@ fi
 
 # Build python wasi
 echo Building python wasi
-python3 Tools/wasm/wasi.py configure-host -- --config-cache --includedir $OPT_DEPS_PATH/include --libdir $OPT_DEPS_PATH/lib --disable-test-modules --with-lto=full
+python3 Tools/wasm/wasi.py configure-host -- --config-cache --includedir $OPT_DEPS_PATH/include --libdir $OPT_DEPS_PATH/lib --disable-test-modules --with-lto=full --experimental-multi-memory
 python3 Tools/wasm/wasi.py make-host
 
 # 'install' python into ./cross-build/wasm32-wasip1/tmp
