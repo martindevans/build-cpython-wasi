@@ -107,7 +107,7 @@ popd > /dev/null
 # Attach a second memory to the file, currently unused
 PYTHON_WASM_FILE=($OUT_PATH/python3.*.wasm)
 pip install wabt
-python3 ../add_memory.py $PYTHON_WASM_FILE $PYTHON_WASM_FILE
+python3 ../add_memory.py $PYTHON_WASM_FILE $PYTHON_WASM_FILE asyncify_unwind_stack_memory_heap
 
 if [ $ASYNCIFY_OPTIMIZE -eq "1" ]
 then
