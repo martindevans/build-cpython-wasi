@@ -1,20 +1,23 @@
-import wasm_tools
+from wabt import Wabt
 import re
 import sys
 import os
+from pathlib import Path
 
 def add_memory(input_path, output_path, initial_pages=1, max_pages=None, export_name="secondary_memory"):
     if not os.path.exists(input_path):
         print(f"Error: {input_path} not found.")
         sys.exit(1)
 
+    wabt = Wabt(skip_update=True)
+
     # 1. Read the WASM binary
     with open(input_path, "rb") as f:
         wasm_binary = f.read()
 
     # 2. Convert WASM to WAT (Text format)
-    # wasm-tools automatically handles the multi-memory proposal support
-    wat_text = wasm_tools.print(wasm_binary)
+    wabt.wasm_to_wat(input_path, output="temp.wat")
+    wat_text = Path("temp.wat").read_text()
 
     # 3. Inject the new memory
     # We look for the first occurrence of '(memory' to place our new memory after it.
@@ -30,17 +33,16 @@ def add_memory(input_path, output_path, initial_pages=1, max_pages=None, export_
         # If the wasm somehow has no memory yet, we insert it at the start of the module
         modified_wat = re.sub(r"\(module", r"(module" + new_memory_def, wat_text)
 
-    # 4. Convert WAT back to WASM binary
+    # Write back to WAT file
+    Path("temp.wat").write_text(wat_text)
+
+    # 4. Convert WAT back to WASM binary ans save result
     try:
-        new_wasm_binary = wasm_tools.parse(modified_wat)
+        wabt.wat_to_wasm("temp.wat", output=output_path)
     except Exception as e:
-        print("Error parsing modified WAT. Ensure the multi-memory proposal is supported.")
+        print("Error converting WAT to WASM.")
         print(e)
         sys.exit(1)
-
-    # 5. Save the result
-    with open(output_path, "wb") as f:
-        f.write(new_wasm_binary)
     
     print(f"Success! Created {output_path} with an additional memory.")
 
