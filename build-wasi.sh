@@ -104,16 +104,14 @@ popd > /dev/null
 # # We could do this in wasm, but it's much slower as we can't use `-j 0`...
 # wasmtime run --wasm max-wasm-stack=8388608 --dir $OUT_PATH::/ --env PYTHONHOME=/ $OUT_PATH/python3.*.wasm -m compileall -f --invalidation-mode unchecked-hash /lib
 
-# Attach a second memory to the file, currently unused
-PYTHON_WASM_FILE=($OUT_PATH/python3.*.wasm)
-chmod +x ./../wabt/bin/wasm2wat
-chmod +x ./../wabt/bin/wat2wasm
-python3 ../add_memory.py $PYTHON_WASM_FILE $PYTHON_WASM_FILE asyncify_unwind_stack_memory_heap
-
 if [ $ASYNCIFY_OPTIMIZE -eq "1" ]
 then
-    echo Asyncify and optimize with wasm-opt
     PYTHON_WASM_FILE=($OUT_PATH/python3.*.wasm)
+
+    echo Add extra Asyncify memory
+    wasm-merge $PYTHON_WASM_FILE first ./../memory_module.wat second -o $PYTHON_WASM_FILE
+
+    echo Asyncify and optimize with wasm-opt
     wasm-opt $PYTHON_WASM_FILE -o ${PYTHON_WASM_FILE%.*}_async.wasm --asyncify -O$OPTIMIZE_LEVEL
 fi
 
