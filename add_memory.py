@@ -1,53 +1,83 @@
-from wabt import Wabt
-import re
+import subprocess
 import sys
 import os
-from pathlib import Path
+import re
 
-def add_memory(input_path, output_path, initial_pages=1, max_pages=None, export_name="secondary_memory"):
-    if not os.path.exists(input_path):
-        print(f"Error: {input_path} not found.")
+# --- CONFIGURATION ---
+# Path to your WABT binaries folder
+WABT_BIN_PATH = "./wabt/bin" 
+
+def run_tool(tool_name, args, input_str=None):
+    ext = ".exe" if os.name == 'nt' else ""
+    tool_path = os.path.join(WABT_BIN_PATH, f"{tool_name}{ext}")
+    
+    if not os.path.exists(tool_path):
+        print(f"Error: {tool_name} not found at {tool_path}")
         sys.exit(1)
 
-    wabt = Wabt(skip_update=True)
-
-    # 1. Read the WASM binary
-    with open(input_path, "rb") as f:
-        wasm_binary = f.read()
-
-    # 2. Convert WASM to WAT (Text format)
-    wabt.wasm_to_wat(input_path, output="temp.wat")
-    wat_text = Path("temp.wat").read_text()
-
-    # 3. Inject the new memory
-    # We look for the first occurrence of '(memory' to place our new memory after it.
-    # We also add an export so the host (JS/Python) can access it.
-    max_str = f" {max_pages}" if max_pages else ""
-    new_memory_def = f'\n  (memory (;1;) {initial_pages}{max_str})\n  (export "{export_name}" (memory 1))'
+    result = subprocess.run(
+        [tool_path] + args,
+        input=input_str,
+        capture_output=True,
+        text=True
+    )
     
-    # This regex finds the first memory definition and appends the second one after it
-    # It handles both (memory 1) and (memory (;0;) 1) formats
-    if "(memory" in wat_text:
-        modified_wat = re.sub(r"(\(memory [^\)]+\))", r"\1" + new_memory_def, wat_text, count=1)
-    else:
-        # If the wasm somehow has no memory yet, we insert it at the start of the module
-        modified_wat = re.sub(r"\(module", r"(module" + new_memory_def, wat_text)
+    if result.returncode != 0:
+        print(f"Error running {tool_name}:")
+        print(result.stderr)
+        sys.exit(1)
+        
+    return result.stdout
 
-    # Write back to WAT file
-    Path("temp.wat").write_text(wat_text)
+def main():
+    if len(sys.argv) < 4:
+        print("Usage: python add_memory.py <input.wasm> <output.wasm> <memory_name>")
+        sys.exit(1)
 
-    # 4. Convert WAT back to WASM binary ans save result
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    mem_name = sys.argv[3]
+
+    # 1. Convert WASM to WAT (text format)
+    # We use "-" for output to get the result in stdout
+    print(f"Reading {input_file}...")
+    wat_content = run_tool("wasm2wat", [input_file, "-o", "-"])
+
+    # 2. Inject the memory declaration
+    # We look for the start of the module '(module' and insert the memory after it.
+    # (memory $name 1) creates a memory with 1 page (64KB)
+    # (export "name" (memory $name)) makes it accessible to the host
+    memory_def = f'\n  (memory ${mem_name} 1)\n  (export "{mem_name}" (memory ${mem_name}))'
+    
+    # Use regex to find the (module line and insert after it
+    new_wat = re.sub(r'\(module', f'(module{memory_def}', wat_content, count=1)
+
+    # 3. Convert WAT back to WASM
+    # We use "-" for input to read from stdin
+    # We add --enable-multi-memory in case there is already a memory defined
+    print(f"Injecting memory '{mem_name}' and recompiling...")
+    
+    # Note: Using run_tool logic but for binary output, we need a slight tweak 
+    # to handle the binary stream. We'll call wat2wasm directly here.
+    ext = ".exe" if os.name == 'nt' else ""
+    wat2wasm_path = os.path.join(WABT_BIN_PATH, f"wat2wasm{ext}")
+    
     try:
-        wabt.wat_to_wasm("temp.wat", output=output_path)
+        process = subprocess.Popen(
+            [wat2wasm_path, "-", "--enable-multi-memory", "-o", output_file],
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        _, stderr = process.communicate(input=new_wat)
+        
+        if process.returncode == 0:
+            print(f"Successfully created: {output_file}")
+        else:
+            print("Error recompiling WASM:")
+            print(stderr)
     except Exception as e:
-        print("Error converting WAT to WASM.")
-        print(e)
-        sys.exit(1)
-    
-    print(f"Success! Created {output_path} with an additional memory.")
+        print(f"Failed to run wat2wasm: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python add_memory.py <input.wasm> <output.wasm>")
-    else:
-        add_memory(sys.argv[1], sys.argv[2])
+    main()
