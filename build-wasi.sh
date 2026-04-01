@@ -109,7 +109,7 @@ then
     PYTHON_WASM_FILE=($OUT_PATH/python3.*.wasm)
 
     echo Add extra Asyncify memory
-    wasm-merge $PYTHON_WASM_FILE first ./../memory_module.wat second -o $PYTHON_WASM_FILE
+    wasm-merge $PYTHON_WASM_FILE first ./../memory_module.wat second --enable-multimemory -o $PYTHON_WASM_FILE
 
     echo Asyncify and optimize with wasm-opt
     wasm-opt $PYTHON_WASM_FILE -o ${PYTHON_WASM_FILE%.*}_async.wasm --enable-multimemory --asyncify -O$OPTIMIZE_LEVEL
