@@ -112,7 +112,7 @@ then
     wasm-merge $PYTHON_WASM_FILE first ./../memory_module.wat second --enable-multimemory -o $PYTHON_WASM_FILE
 
     echo Asyncify and optimize with wasm-opt
-    wasm-opt $PYTHON_WASM_FILE -o ${PYTHON_WASM_FILE%.*}_async.wasm --enable-multimemory --asyncify -O$OPTIMIZE_LEVEL
+    wasm-opt $PYTHON_WASM_FILE -o ${PYTHON_WASM_FILE%.*}_async.wasm --enable-multimemory --pass-arg=asyncify-memory@asyncify_unwind_stack_memory_heap --asyncify -O$OPTIMIZE_LEVEL
 fi
 
 popd > /dev/null
