@@ -14,7 +14,7 @@ ENV WASMTIME_HOME=/opt/wasmtime
 ENV WASMTIME_VERSION=22.0.0
 ENV WASMTIME_CPU_ARCH=x86_64
 
-RUN dnf -y --nodocs --setopt=install_weak_deps=False install /usr/bin/{blurb,clang,curl,git,ln,tar,xz} 'dnf-command(builddep)' && \
+RUN dnf -y --nodocs --setopt=install_weak_deps=False install /usr/bin/{blurb,clang,curl,git,ln,tar,xz} python3-pip 'dnf-command(builddep)' && \
     dnf -y --nodocs --setopt=install_weak_deps=False builddep python3 && \
     dnf -y clean all
 
