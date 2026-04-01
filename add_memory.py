@@ -5,7 +5,7 @@ import re
 
 # --- CONFIGURATION ---
 # Path to your WABT binaries folder
-WABT_BIN_PATH = "./wabt/bin" 
+WABT_BIN_PATH = "./../wabt/bin" 
 
 def run_tool(tool_name, args, input_str=None):
     ext = ".exe" if os.name == 'nt' else ""
