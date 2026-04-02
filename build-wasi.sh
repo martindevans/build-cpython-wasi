@@ -65,7 +65,7 @@ fi
 
 # Build python wasi
 echo Building python wasi
-python3 Tools/wasm/wasi.py configure-host -- --config-cache --includedir $OPT_DEPS_PATH/include --libdir $OPT_DEPS_PATH/lib --disable-test-modules --with-lto=full --experimental-multi-memory
+python3 Tools/wasm/wasi.py configure-host -- --config-cache --includedir $OPT_DEPS_PATH/include --libdir $OPT_DEPS_PATH/lib --disable-test-modules --with-lto=full
 python3 Tools/wasm/wasi.py make-host
 
 # 'install' python into ./cross-build/wasm32-wasip1/tmp
@@ -108,7 +108,7 @@ if [ $ASYNCIFY_OPTIMIZE -eq "1" ]
 then
     PYTHON_WASM_FILE=($OUT_PATH/python3.*.wasm)
 
-    echo Add extra Asyncify memory
+    echo Add extra asyncify memory
     wasm-merge $PYTHON_WASM_FILE first ./../memory_module.wat second --enable-multimemory -o $PYTHON_WASM_FILE
 
     echo Asyncify and optimize with wasm-opt
